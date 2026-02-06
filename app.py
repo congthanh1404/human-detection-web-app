@@ -4,10 +4,10 @@ from PIL import Image
 import os
 
 # --- 1. CẤU HÌNH TRANG WEB ---
-st.set_page_config(page_title="Human Detection App", page_icon="👦", layout="wide")
+st.set_page_config(page_title="Human Detection App", layout="wide")
 
 # --- 2. GIAO DIỆN TIÊU ĐỀ ---
-st.title("👦 Human Detection System")
+st.title("Human Detection ")
 st.write("Trương Công Thành - 223332852")
 st.markdown("---")
 
@@ -26,7 +26,7 @@ model = load_model()
 # --- 4. CẤU HÌNH ĐẦU VÀO ---
 st.sidebar.header("Cấu hình")
 input_type = st.sidebar.radio("Chọn nguồn ảnh:", ("Tải ảnh lên", "Sử dụng Webcam"))
-conf_threshold = st.sidebar.slider("Ngưỡng tin cậy (Confidence)", 0.0, 1.0, 0.5)
+
 
 source_img = None
 
@@ -49,7 +49,7 @@ if source_img is not None:
     
     with st.spinner('Đang phân tích...'):
         # CHỈ NHẬN DIỆN NGƯỜI (classes=[0])
-        results = model.predict(source=source_img, conf=conf_threshold, classes=[0]) 
+        results = model.predict(source=source_img, conf=0.5, classes=[0]) 
         res_plotted = results[0].plot()
         count = len(results[0].boxes)
 
@@ -61,3 +61,4 @@ if source_img is not None:
             st.success(f"✅ Xác nhận: Tìm thấy {count} người.")
         else:
             st.warning("⚠️ Không phát hiện thấy người.")
+
