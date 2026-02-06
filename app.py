@@ -4,81 +4,55 @@ from PIL import Image
 import numpy as np
 
 # --- 1. CẤU HÌNH TRANG WEB ---
-st.set_page_config(
-    page_title="Human Detection App",
-    page_icon="👦",
-    layout="wide"
-)
+st.set_page_config(page_title="Human Detection App", page_icon="👦", layout="wide")
 
-# --- 2. GIAO DIỆN TIÊU ĐỀ (GIỐNG ẢNH MẪU) ---
-st.title("👦 Human Detection")
-st.write("Truong Cong Thanh - 223332852")
-st.write("Upload ảnh để phát hiện có phải người hay không.")
+# --- 2. GIAO DIỆN TIÊU ĐỀ ---
+st.title(" Human Detection ")
+st.write("Trương Công Thành - 223332852")
 
-st.markdown("---")
-
-# --- 3. TẢI MÔ HÌNH ---
-# Hàm này giúp cache mô hình để không phải load lại mỗi khi bạn bấm nút
+# --- 3. LOAD MÔ HÌNH ---
 @st.cache_resource
 def load_model():
-    # Đảm bảo file best.pt nằm cùng thư mục với file app.py này
     return YOLO("best.pt")
 
-try:
-    model = load_model()
-except Exception as e:
-    st.error(f"Lỗi: Không tìm thấy file 'best.pt' trong thư mục. Vui lòng kiểm tra lại!")
-    st.stop()
+model = load_model()
 
-# --- 4. BỐ CỤC CHÍNH (GỒM 2 CỘT) ---
-left_col, right_col = st.columns([1, 1])
+# --- 4. CHỌN PHƯƠNG THỨC ĐẦU VÀO ---
+st.sidebar.header("Cấu hình đầu vào")
+input_type = st.sidebar.radio("Chọn nguồn ảnh:", ("Tải ảnh lên", "Sử dụng Webcam"))
 
-with left_col:
-    st.subheader("📁 Chọn ảnh từ máy tính")
-    uploaded_file = st.file_uploader(
-        "Drag and drop file here", 
-        type=["jpg", "jpeg", "png"],
-        help="Giới hạn 200MB mỗi file"
-    )
+# Biến chứa dữ liệu ảnh
+source_img = None
 
-with right_col:
-    st.subheader("📊 Kết quả phân tích")
-    # Khu vực này sẽ hiển thị kết quả sau khi xử lý
-
-# --- 5. XỬ LÝ ẢNH VÀ HIỂN THỊ ---
-if uploaded_file is not None:
-    # Đọc ảnh từ file upload
-    image = Image.open(uploaded_file)
-    
-    with left_col:
-        st.image(image, caption="Ảnh gốc đã tải lên", use_container_width=True)
-        btn_analyze = st.button("Nhấn để Submit và xem kết quả")
-
-    if btn_analyze:
-        with st.spinner('Đang nhận diện...'):
-            # Chạy mô hình dự đoán
-            results = model.predict(source=image, conf=0.25)
-            
-            # Vẽ kết quả lên ảnh
-            res_plotted = results[0].plot()
-            
-            # Đếm số lượng người (Class 0 trong bộ COCO/Human là người)
-            # Lưu ý: Nếu bạn train bộ dữ liệu chỉ có 1 lớp, class id luôn là 0
-            count = len(results[0].boxes) 
-
-        with right_col:
-            # Hiển thị ảnh đã được vẽ khung nhận diện
-            st.image(res_plotted, caption="Kết quả phát hiện", use_container_width=True)
-            
-            # Hiển thị thông báo số lượng
-            if count > 0:
-                st.success(f"Tìm thấy {count} người trong ảnh!")
-            else:
-                st.warning("Không tìm thấy người nào trong ảnh này.")
+if input_type == "Tải ảnh lên":
+    uploaded_file = st.file_uploader("Chọn ảnh từ máy tính...", type=["jpg", "jpeg", "png"])
+    if uploaded_file:
+        source_img = Image.open(uploaded_file)
 else:
-    with right_col:
-        st.info("Chọn ảnh và nhấn Submit để xem kết quả")
+    # Chức năng chụp ảnh từ Webcam
+    cam_file = st.camera_input("Chụp ảnh để nhận diện người")
+    if cam_file:
+        source_img = Image.open(cam_file)
 
-# --- 6. CHÂN TRANG ---
-st.markdown("---")
-st.caption("Ứng dụng được phát triển trên nền tảng Streamlit & YOLOv8/v11")
+# --- 5. XỬ LÝ VÀ HIỂN THỊ KẾT QUẢ ---
+if source_img is not None:
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.subheader("Ảnh đầu vào")
+        st.image(source_img, use_container_width=True)
+    
+    # Nút bấm kích hoạt nhận diện
+    if st.button("Bắt đầu nhận diện"):
+        with st.spinner('Đang phân tích...'):
+            results = model.predict(source_img, conf=0.25)
+            res_plotted = results[0].plot()
+            count = len(results[0].boxes)
+
+        with col2:
+            st.subheader("Kết quả")
+            st.image(res_plotted, use_container_width=True)
+            if count > 0:
+                st.success(f"Tìm thấy {count} người!")
+            else:
+                st.warning("Không tìm thấy người.")
